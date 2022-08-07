@@ -7,3 +7,14 @@
     width: 600px;
     height: 600px;
 }
+
+.controls {
+    position: absolute;
+    z-index: 10;
+    top: 20%;
+    left: 50%;
+}
+
+.controls, select, option {
+    font-size: 25px;
+}
