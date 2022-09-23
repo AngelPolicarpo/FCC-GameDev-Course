@@ -66,6 +66,35 @@ var Raven = /** @class */ (function () {
     };
     return Raven;
 }());
+var explosion = [];
+var Explosion = /** @class */ (function () {
+    function Explosion(x, y, size) {
+        this.image = new Image();
+        this.image.src = 'boom.png';
+        this.spriteHeight = 179;
+        this.spriteWidth = 200;
+        this.size = size;
+        this.x = x;
+        this.y = y;
+        this.frame = 0;
+        this.sound = new Audio();
+        this.sound.src = 'boom.mp3';
+        this.timeSinceLastFrame = 0;
+        this.frameInterval = 200;
+    }
+    Explosion.prototype.update = function (deltaTime) {
+        if (this.frame === 0)
+            this.sound.play();
+        this.timeSinceLastFrame += deltaTime;
+        if (this.timeSinceLastFrame > this.frameInterval) {
+            this.frame++;
+        }
+    };
+    Explosion.prototype.draw = function () {
+        ctx.drawImage(this.image, this.frame * this.spriteWidth, 0, this.spriteWidth, this.spriteHeight, this.x, this.y, this.size, this.size);
+    };
+    return Explosion;
+}());
 function drawScore() {
     ctx.fillStyle = 'black';
     ctx.fillText('Score: ' + score, 50, 75);
@@ -79,6 +108,7 @@ window.addEventListener('click', function (e) {
         if (object.randomColors[0] === pc[0] && object.randomColors[1] === pc[1] && object.randomColors[2] === pc[2]) {
             object.markedForDeletion = true;
             score++;
+            explosion.push(new Explosion(object.x, object.y, object.width));
         }
     });
 });
@@ -97,9 +127,10 @@ function animate(timestamp) {
     }
     ;
     drawScore();
-    __spreadArrays(ravens).forEach(function (object) { return object.update(deltaTime); });
-    __spreadArrays(ravens).forEach(function (object) { return object.draw(); });
+    __spreadArrays(ravens, explosion).forEach(function (object) { return object.update(deltaTime); });
+    __spreadArrays(ravens, explosion).forEach(function (object) { return object.draw(); });
     ravens = ravens.filter(function (object) { return !object.markedForDeletion; });
+    explosion = explosion.filter(function (object) { return !object.markedForDeletion; });
     requestAnimationFrame(animate);
 }
 animate(0);
