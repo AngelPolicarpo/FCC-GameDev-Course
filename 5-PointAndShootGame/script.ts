@@ -11,7 +11,9 @@ collisionCanvas.width = window.innerWidth;
 collisionCanvas.height = window.innerHeight;
 
 ctx.font = '35px Arial';
+let gameOver = false;
 let score = 0;
+var recordValue = localStorage.record;
 let timeToNextRaven = 0;
 let ravenInterval = 500;
 let lastTime = 0;
@@ -68,6 +70,7 @@ class Raven {
             else this.frame++;
             this.timeSinceFlap = 0;
         }
+        if (this.x < 0 - this.width) gameOver = true;
     }
     draw() {
         collisionCtx.fillStyle = this.color;
@@ -81,9 +84,9 @@ class Explosion {
     image: HTMLImageElement;
     spriteHeight: number;
     spriteWidth: number;
-    size: any;
-    x: any;
-    y: any;
+    size: number;
+    x: number;
+    y: number;
     frame: number;
     sound: HTMLAudioElement;
     timeSinceLastFrame: number;
@@ -102,16 +105,19 @@ class Explosion {
         this.sound.src = 'boom.mp3';
         this.timeSinceLastFrame = 0;
         this.frameInterval = 200;
+        this.markedForDeletion = false;
     }
     update(deltaTime) {
         if (this.frame === 0) this.sound.play();
         this.timeSinceLastFrame += deltaTime;
         if (this.timeSinceLastFrame > this.frameInterval) {
             this.frame++;
+            this.timeSinceLastFrame = 0;
+            if (this.frame > 5) this.markedForDeletion = true;
         }
     }
     draw() {
-        ctx.drawImage(this.image, this.frame * this.spriteWidth, 0, this.spriteWidth, this.spriteHeight, this.x, this.y, this.size, this.size);
+        ctx.drawImage(this.image, this.frame * this.spriteWidth, 0, this.spriteWidth, this.spriteHeight, this.x, this.y - this.size/4, this.size, this.size);
     }
 }
 
@@ -120,6 +126,20 @@ function drawScore() {
     ctx.fillText('Score: ' + score, 50, 75)
     ctx.fillStyle = 'white';
     ctx.fillText('Score: ' + score, 53, 73)
+}
+
+function drawGameOver() {
+    ctx.textAlign = 'center';
+    ctx.fillStyle = 'black';
+    ctx.fillText('LOSER', canvas.width/2, canvas.height/2);
+    ctx.fillStyle = 'white';
+    ctx.fillText('LOSER', canvas.width/2 +3, canvas.height/2 -2);    
+}
+function drawRecord() {
+    ctx.fillStyle = 'black';
+    ctx.fillText('Record: ' + localStorage.record, 50, 75*1.5)
+    ctx.fillStyle = 'white';
+    ctx.fillText('Record: ' + localStorage.record, 53, 73*1.5)
 }
 
 window.addEventListener('click', function (e) {
@@ -134,6 +154,15 @@ window.addEventListener('click', function (e) {
     });
 });
 
+function saveRecord() {
+    if (score > recordValue) {
+    localStorage.record = 0;
+    recordValue = score;
+    localStorage.record = recordValue;
+    console.log(localStorage.record)
+    }
+}
+
 function animate(timestamp: number) {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     collisionCtx.clearRect(0, 0, canvas.width, canvas.height);
@@ -147,12 +176,15 @@ function animate(timestamp: number) {
             return a.width - b.width;
         });
     };
+    saveRecord()
     drawScore();
+    drawRecord();
     [...ravens, ...explosion].forEach(object => object.update(deltaTime));
     [...ravens, ...explosion].forEach(object => object.draw());
     ravens = ravens.filter(object => !object.markedForDeletion);
     explosion = explosion.filter(object => !object.markedForDeletion);
-    requestAnimationFrame(animate);
+    if (!gameOver) requestAnimationFrame(animate);
+    else drawGameOver();
 }
 animate(0);
 

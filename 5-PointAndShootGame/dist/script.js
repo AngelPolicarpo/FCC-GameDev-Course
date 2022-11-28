@@ -16,7 +16,9 @@ var collisionCtx = collisionCanvas.getContext('2d');
 collisionCanvas.width = window.innerWidth;
 collisionCanvas.height = window.innerHeight;
 ctx.font = '35px Arial';
+var gameOver = false;
 var score = 0;
+var recordValue = localStorage.record;
 var timeToNextRaven = 0;
 var ravenInterval = 500;
 var lastTime = 0;
@@ -58,6 +60,8 @@ var Raven = /** @class */ (function () {
                 this.frame++;
             this.timeSinceFlap = 0;
         }
+        if (this.x < 0 - this.width)
+            gameOver = true;
     };
     Raven.prototype.draw = function () {
         collisionCtx.fillStyle = this.color;
@@ -81,6 +85,7 @@ var Explosion = /** @class */ (function () {
         this.sound.src = 'boom.mp3';
         this.timeSinceLastFrame = 0;
         this.frameInterval = 200;
+        this.markedForDeletion = false;
     }
     Explosion.prototype.update = function (deltaTime) {
         if (this.frame === 0)
@@ -88,10 +93,13 @@ var Explosion = /** @class */ (function () {
         this.timeSinceLastFrame += deltaTime;
         if (this.timeSinceLastFrame > this.frameInterval) {
             this.frame++;
+            this.timeSinceLastFrame = 0;
+            if (this.frame > 5)
+                this.markedForDeletion = true;
         }
     };
     Explosion.prototype.draw = function () {
-        ctx.drawImage(this.image, this.frame * this.spriteWidth, 0, this.spriteWidth, this.spriteHeight, this.x, this.y, this.size, this.size);
+        ctx.drawImage(this.image, this.frame * this.spriteWidth, 0, this.spriteWidth, this.spriteHeight, this.x, this.y - this.size / 4, this.size, this.size);
     };
     return Explosion;
 }());
@@ -100,6 +108,19 @@ function drawScore() {
     ctx.fillText('Score: ' + score, 50, 75);
     ctx.fillStyle = 'white';
     ctx.fillText('Score: ' + score, 53, 73);
+}
+function drawGameOver() {
+    ctx.textAlign = 'center';
+    ctx.fillStyle = 'black';
+    ctx.fillText('LOSER', canvas.width / 2, canvas.height / 2);
+    ctx.fillStyle = 'white';
+    ctx.fillText('LOSER', canvas.width / 2 + 3, canvas.height / 2 - 2);
+}
+function drawRecord() {
+    ctx.fillStyle = 'black';
+    ctx.fillText('Record: ' + localStorage.record, 50, 75 * 1.5);
+    ctx.fillStyle = 'white';
+    ctx.fillText('Record: ' + localStorage.record, 53, 73 * 1.5);
 }
 window.addEventListener('click', function (e) {
     var detectPixelColor = collisionCtx.getImageData(e.x, e.y, 1, 1);
@@ -112,6 +133,14 @@ window.addEventListener('click', function (e) {
         }
     });
 });
+function saveRecord() {
+    if (score > recordValue) {
+        localStorage.record = 0;
+        recordValue = score;
+        localStorage.record = recordValue;
+        console.log(localStorage.record);
+    }
+}
 function animate(timestamp) {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     collisionCtx.clearRect(0, 0, canvas.width, canvas.height);
@@ -126,11 +155,16 @@ function animate(timestamp) {
         });
     }
     ;
+    saveRecord();
     drawScore();
+    drawRecord();
     __spreadArrays(ravens, explosion).forEach(function (object) { return object.update(deltaTime); });
     __spreadArrays(ravens, explosion).forEach(function (object) { return object.draw(); });
     ravens = ravens.filter(function (object) { return !object.markedForDeletion; });
     explosion = explosion.filter(function (object) { return !object.markedForDeletion; });
-    requestAnimationFrame(animate);
+    if (!gameOver)
+        requestAnimationFrame(animate);
+    else
+        drawGameOver();
 }
 animate(0);
